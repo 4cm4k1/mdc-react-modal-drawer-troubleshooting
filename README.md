@@ -1,234 +1,62 @@
-This project was bootstrapped with [Create Next App](https://github.com/segmentio/create-next-app).
+# mdc-react-modal-drawer-troubleshooting
 
-Find the most recent version of this guide at [here](https://github.com/segmentio/create-next-app/blob/master/lib/templates/default/README.md). And check out [Next.js repo](https://github.com/zeit/next.js) for the most up-to-date info.
+If I am not mistaken, there seems to be a bug in the implementation of `focus-trap-react` in`@material/react-drawer`. Activating the modal variant of the drawer causes `react` to crash and attempt to recreate the component tree unsuccessfully, with the below console output. I have reproduced this both in this example repository and my [personal website's repo](https://github.com/4cm4k1/website) in development and production modes. I have done my best in following the documentation, which currently isn't the greatest and has several typographical errors in variable/function naming. I've also tried troubleshooting this myself, but without much success. Notably, by setting manually `focusTrapOptions` values all to `true`, I prevented the crash, but it then results in Chrome killing a call stack that maxes out, which hints at a looping issue. Then, I looked at `focus-trap`'s docs and found that `initialFocus` should not be set as a Boolean [as it is here](https://github.com/material-components/material-components-web-react/blob/master/packages/drawer/index.js#L155). However, I'm finding the layers of abstraction a little bit hard to follow, so that's why I'm raising the issue here. I don't know how to solve this. :P
 
-## Table of Contents
+## How to use
 
-- [Questions? Feedback?](#questions-feedback)
-- [Folder Structure](#folder-structure)
-- [Available Scripts](#available-scripts)
-  - [npm run dev](#npm-run-dev)
-  - [npm run build](#npm-run-build)
-  - [npm run start](#npm-run-start)
-- [Using CSS](#using-css)
-- [Adding Components](#adding-components)
-- [Fetching Data](#fetching-data)
-- [Custom Server](#custom-server)
-- [Syntax Highlighting](#syntax-highlighting)
-- [Using the `static` Folder](#using-the-static-folder)
-- [Deploy to Now](#deploy-to-now)
-- [Something Missing?](#something-missing)
+1. `yarn install`
+2. `yarn dev` (hot-module reloading with Webpack and Next.js)
+3. `yarn build && yarn start` (build and serve in production mode)
 
-## Questions? Feedback?
+## Error output
 
-Check out [Next.js FAQ & docs](https://github.com/zeit/next.js#faq) or [let us know](https://github.com/segmentio/create-next-app/issues) your feedback.
+### Dev mode
 
-## Folder Structure
-
-After creating an app, it should look something like:
-
-```
-.
-├── README.md
-├── components
-│   ├── head.js
-│   └── nav.js
-├── next.config.js
-├── node_modules
-│   ├── [...]
-├── package.json
-├── pages
-│   └── index.js
-├── static
-│   └── favicon.ico
-└── yarn.lock
+```shell
+Uncaught Error: You can't have a focus-trap without at least one focusable element
+    at getInitialFocusNode (VM1105 index.js:214)
+    at updateTabbableNodes (VM1105 index.js:222)
+    at Object.activate (VM1105 index.js:211)
+    at FocusTrap.componentDidMount (VM1105 index.js:906)
+    at commitLifeCycles (VM1117 react-dom.development.js:15255)
+    at commitAllLifeCycles (VM1117 react-dom.development.js:16523)
+    at HTMLUnknownElement.callCallback (VM1117 react-dom.development.js:149)
+    at Object.invokeGuardedCallbackDev (VM1117 react-dom.development.js:199)
+    at invokeGuardedCallback (VM1117 react-dom.development.js:256)
+    at commitRoot (VM1117 react-dom.development.js:16677)
+    at completeRoot (VM1117 react-dom.development.js:18069)
+    at performWorkOnRoot (VM1117 react-dom.development.js:17997)
+    at performWork (VM1117 react-dom.development.js:17901)
+    at performSyncWork (VM1117 react-dom.development.js:17873)
+    at batchedUpdates$1 (VM1117 react-dom.development.js:18108)
+    at batchedUpdates (VM1117 react-dom.development.js:2198)
+    at dispatchEvent (VM1117 react-dom.development.js:4939)
 ```
 
-Routing in Next.js is based on the file system, so `./pages/index.js` maps to the `/` route and
-`./pages/about.js` would map to `/about`.
+```shell
+The above error occurred in the <FocusTrap> component:
+    in FocusTrap (created by Drawer)
+    in aside (created by Drawer)
+    in Drawer (at pages/index.js:20)
+    in Home (created by App)
+    in Container (created by App)
+    in App
 
-The `./static` directory maps to `/static` in the `next` server, so you can put all your
-other static resources like images or compiled CSS in there.
-
-Out of the box, we get:
-
-- Automatic transpilation and bundling (with webpack and babel)
-- Hot code reloading
-- Server rendering and indexing of `./pages`
-- Static file serving. `./static/` is mapped to `/static/`
-
-Read more about [Next's Routing](https://github.com/zeit/next.js#routing)
-
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm run dev`
-
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
-
-The page will reload if you make edits.<br>
-You will also see any errors in the console.
-
-### `npm run build`
-
-Builds the app for production to the `.next` folder.<br>
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-### `npm run start`
-
-Starts the application in production mode.
-The application should be compiled with \`next build\` first.
-
-See the section in Next docs about [deployment](https://github.com/zeit/next.js/wiki/Deployment) for more information.
-
-## Using CSS
-
-[`styled-jsx`](https://github.com/zeit/styled-jsx) is bundled with next to provide support for isolated scoped CSS. The aim is to support "shadow CSS" resembling of Web Components, which unfortunately [do not support server-rendering and are JS-only](https://github.com/w3c/webcomponents/issues/71).
-
-```jsx
-export default () => (
-  <div>
-    Hello world
-    <p>scoped!</p>
-    <style jsx>{`
-      p {
-        color: blue;
-      }
-      div {
-        background: red;
-      }
-      @media (max-width: 600px) {
-        div {
-          background: blue;
-        }
-      }
-    `}</style>
-  </div>
-)
+React will try to recreate this component tree from scratch using the error boundary you provided, App.
 ```
 
-Read more about [Next's CSS features](https://github.com/zeit/next.js#css).
+### Prod mode
 
-## Adding Components
-
-We recommend keeping React components in `./components` and they should look like:
-
-### `./components/simple.js`
-
-```jsx
-const Simple = () => <div>Simple Component</div>
-
-export default Simple // don't forget to export default!
+```shell
+Error: You can't have a focus-trap without at least one focusable element
+    at h (index.js:58)
+    at E (index.js:58)
+    at Object.activate (index.js:58)
+    at t.value (index.js:308)
+    at Ia (commons.2a89c77150ec82f381ee.js:22)
+    at ja (commons.2a89c77150ec82f381ee.js:22)
+    at Oa (commons.2a89c77150ec82f381ee.js:22)
+    at Aa (commons.2a89c77150ec82f381ee.js:22)
+    at Ue (commons.2a89c77150ec82f381ee.js:22)
+    at Nn (commons.2a89c77150ec82f381ee.js:22)
 ```
-
-### `./components/complex.js`
-
-```jsx
-import { Component } from 'react'
-
-class Complex extends Component {
-  state = {
-    text: 'World'
-  }
-
-  render() {
-    const { text } = this.state
-    return <div>Hello {text}</div>
-  }
-}
-
-export default Complex // don't forget to export default!
-```
-
-## Fetching Data
-
-You can fetch data in `pages` components using `getInitialProps` like this:
-
-### `./pages/stars.js`
-
-```jsx
-const Page = props => <div>Next stars: {props.stars}</div>
-
-Page.getInitialProps = async ({ req }) => {
-  const res = await fetch('https://api.github.com/repos/zeit/next.js')
-  const json = await res.json()
-  const stars = json.stargazers_count
-  return { stars }
-}
-
-export default Page
-```
-
-For the initial page load, `getInitialProps` will execute on the server only. `getInitialProps` will only be executed on the client when navigating to a different route via the `Link` component or using the routing APIs.
-
-_Note: `getInitialProps` can **not** be used in children components. Only in `pages`._
-
-Read more about [fetching data and the component lifecycle](https://github.com/zeit/next.js#fetching-data-and-component-lifecycle)
-
-## Custom Server
-
-Want to start a new app with a custom server? Run `create-next-app --example customer-server custom-app`
-
-Typically you start your next server with `next start`. It's possible, however, to start a server 100% programmatically in order to customize routes, use route patterns, etc
-
-This example makes `/a` resolve to `./pages/b`, and `/b` resolve to `./pages/a`:
-
-```jsx
-const { createServer } = require('http')
-const { parse } = require('url')
-const next = require('next')
-
-const dev = process.env.NODE_ENV !== 'production'
-const app = next({ dev })
-const handle = app.getRequestHandler()
-
-app.prepare().then(() => {
-  createServer((req, res) => {
-    // Be sure to pass `true` as the second argument to `url.parse`.
-    // This tells it to parse the query portion of the URL.
-    const parsedUrl = parse(req.url, true)
-    const { pathname, query } = parsedUrl
-
-    if (pathname === '/a') {
-      app.render(req, res, '/b', query)
-    } else if (pathname === '/b') {
-      app.render(req, res, '/a', query)
-    } else {
-      handle(req, res, parsedUrl)
-    }
-  }).listen(3000, err => {
-    if (err) throw err
-    console.log('> Ready on http://localhost:3000')
-  })
-})
-```
-
-Then, change your `start` script to `NODE_ENV=production node server.js`.
-
-Read more about [custom server and routing](https://github.com/zeit/next.js#custom-server-and-routing)
-
-## Syntax Highlighting
-
-To configure the syntax highlighting in your favorite text editor, head to the [relevant Babel documentation page](https://babeljs.io/docs/editors) and follow the instructions. Some of the most popular editors are covered.
-
-## Deploy to Now
-
-[now](https://zeit.co/now) offers a zero-configuration single-command deployment.
-
-1.  Install the `now` command-line tool either via the recommended [desktop tool](https://zeit.co/download) or via node with `npm install -g now`.
-
-2.  Run `now` from your project directory. You will see a **now.sh** URL in your output like this:
-
-    ```
-    > Ready! https://your-project-dirname-tpspyhtdtk.now.sh (copied to clipboard)
-    ```
-
-    Paste that URL into your browser when the build is complete, and you will see your deployed app.
-
-You can find more details about [`now` here](https://zeit.co/now).
-
-## Something Missing?
-
-If you have ideas for how we could improve this readme or the project in general, [let us know](https://github.com/segmentio/create-next-app/issues) or [contribute some!](https://github.com/segmentio/create-next-app/edit/master/lib/templates/default/README.md)
